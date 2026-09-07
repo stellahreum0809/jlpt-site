@@ -410,12 +410,14 @@ function showStage1(){
     ${areasHtml()}${unknownNote()}
     <div class="callout"><b>8문항을 더 풀면 알 수 있어요</b>
       <ul><li>어휘·문법·독해 영역별 레벨</li>
-      <li>틀린 문제의 문법 포인트</li>
+      <li>두 급수 중 어느 쪽인지 확정</li>
       <li>다음 시험 응시 가능 여부</li></ul>
     </div>
+    ${reviewHtml()}
     <div class="adslot">광고 자리</div>
     <div class="next"><a href="./n5-words.html">레벨별 학습 자료 보러 가기</a></div></div>`;
   setDock('8문항 더 풀기',()=>{S.stage=2;startBlock(nextLevel2())});
+  bindReview();
   window.scrollTo(0,0);
 }
 function showFinal(early){
