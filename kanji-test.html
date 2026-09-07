@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>한자 레벨 테스트 — 읽기와 뜻을 따로 진단</title>
+<meta name="description" content="20문항으로 한자 읽기 레벨과 뜻 레벨을 따로 진단합니다. 뜻은 아는데 음독을 모르는 격차를 확인하고, 문제마다 해설을 볼 수 있습니다.">
+<link rel="stylesheet" as="style" crossorigin
+  href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./test.css">
+<style>
+.k-type{font-size:.8125rem;font-weight:700;color:var(--blue);margin-bottom:.5rem}
+.k-type span{color:var(--t3);font-weight:500;margin-left:.4rem}
+.k-word{font-family:var(--jp);font-size:3.25rem;line-height:1.25;font-weight:700;
+  letter-spacing:.02em;text-align:center;margin:.5rem 0 1.5rem}
+.stem b{color:var(--blue-dark)}
+.twin{display:flex;gap:.75rem;margin:1.5rem 0}
+.twin>div{flex:1;background:var(--surface);border-radius:var(--r-xl);padding:1.3rem 1.1rem;text-align:center}
+.twin .lb{font-size:.8125rem;font-weight:600;color:var(--t3);margin-bottom:.5rem}
+.twin .lv{font-size:2rem;font-weight:800;letter-spacing:-.03em;line-height:1.1}
+.twin .sub{font-size:.75rem;color:var(--t3);margin-top:.35rem}
+.gap{margin:1.5rem 0;padding:1.35rem;background:var(--blue-pale);border-radius:var(--r-lg);
+  font-size:.9375rem;line-height:1.75;color:var(--t2)}
+.gap b{color:var(--t1)}
+.grid{background:var(--surface);border-radius:var(--r-xl);padding:.4rem 1.3rem;margin:1.5rem 0}
+.grid .r{display:flex;align-items:center;gap:1rem;padding:.85rem 0}
+.grid .r+.r{border-top:1px solid var(--line)}
+.grid .n{flex:0 0 2rem;font-weight:800;color:var(--blue)}
+.grid .c{flex:1;font-size:.875rem;color:var(--t2);display:flex;justify-content:space-between}
+.grid .c b{font-weight:700;color:var(--t1)}
+@media (max-width:520px){.k-word{font-size:2.75rem}.twin .lv{font-size:1.75rem}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app">불러오는 중…</div>
+<div class="dock" id="dock" hidden><div class="wrap"><button class="btn" id="dockbtn"></button></div></div>
+
+<script>
+const ORDER=['n5','n4','n3','n2','n1'];
+const LABEL={n5:'N5',n4:'N4',n3:'N3',n2:'N2',n1:'N1'};
+const TYPE={reading:'읽기',meaning:'뜻'};
+let DATA=null;
+let S={qs:[],idx:0,answers:[]};
+const app=document.getElementById('app'),dock=document.getElementById('dock'),dockbtn=document.getElementById('dockbtn');
+const rnd=n=>Math.floor(Math.random()*n);
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=rnd(i+1);[a[i],a[j]]=[a[j],a[i]]}return a}
+function setDock(label,fn){
+  if(!label){dock.hidden=true;dockbtn.onclick=null;return}
+  dock.hidden=false;dockbtn.textContent=label;dockbtn.onclick=fn;
+}
+
+/* 레벨마다 읽기 2 + 뜻 2를 뽑고, 보기 순서를 섞는다.
+   원본 JSON은 정답이 항상 첫 보기라 섞지 않으면 답이 보인다. */
+function build(){
+  const out=[];
+  ORDER.forEach(lv=>{
+    ['reading','meaning'].forEach(type=>{
+      shuffle([...DATA.levels[lv][type]]).slice(0,2).forEach(q=>{
+        const opts=q.options.map((text,i)=>({text,correct:i===q.answer}));
+        shuffle(opts);
+        out.push({...q,level:lv,type,opts,answerIdx:opts.findIndex(o=>o.correct)});
+      });
+    });
+  });
+  return out;
+}
+
+function progress(){
+  return `<div class="topbar"><div class="bar"><span style="width:${(S.idx/S.qs.length*100).toFixed(1)}%"></span></div>
+          <p class="count">${S.idx+1} / ${S.qs.length}</p></div>`;
+}
+function renderQuestion(){
+  const q=S.qs[S.idx];
+  setDock(null);
+  const body = q.type==='reading'
+    ? `<p class="stem" lang="ja">${q.sentence}</p>`
+    : `<p class="k-word" lang="ja">${q.word}</p>`;
+  app.innerHTML=progress()+`<div class="rise">
+    <p class="k-type">${LABEL[q.level]} ${TYPE[q.type]}<span>${q.type==='reading'?'굵은 글씨의 읽는 법을 고르세요':'이 한자어의 뜻을 고르세요'}</span></p>
+    ${body}
+    <div class="choices">`+
+    q.opts.map((o,i)=>`<button data-i="${i}"><span class="num">${i+1}</span><span${q.type==='reading'?' lang="ja"':''}>${o.text}</span></button>`).join('')+
+    `</div><button class="unknown" data-i="-1">모르겠어요</button>
+    <p class="hint">찍어서 맞히면 결과가 실제보다 높아집니다.</p></div>`;
+  app.querySelectorAll('button[data-i]').forEach(b=>{
+    b.onclick=()=>{S.answers.push(+b.dataset.i);S.idx++;
+      S.idx<S.qs.length?renderQuestion():showResult()};
+  });
+  window.scrollTo(0,0);
+}
+
+function tally(type){
+  return ORDER.map(lv=>{
+    let n=0;
+    S.qs.forEach((q,i)=>{if(q.level===lv&&q.type===type&&S.answers[i]===q.answerIdx)n++});
+    return n;
+  });
+}
+/* 아래 레벨부터 올라가며, 2문항을 다 맞히면 통과하고 1개만 맞히면 그 레벨을 경계로 본다. */
+function levelOf(counts){
+  let idx=-1,border=false;
+  for(let i=0;i<counts.length;i++){
+    if(counts[i]>=2){idx=i;continue}
+    if(counts[i]===1){idx=i;border=true}
+    break;
+  }
+  return{idx,border};
+}
+const levelText=r=>r.idx<0?'N5 미만':(LABEL[ORDER[r.idx]]+(r.border?' 경계':''));
+
+function gapText(rd,mn){
+  if(rd.idx<0&&mn.idx<0)return`아직 N5 한자가 자리잡지 않은 단계입니다. 격차를 따질 단계는 아니고, <b>기초 한자부터 뜻과 읽기를 함께</b> 쌓아야 합니다. 日·人·山처럼 매일 보는 글자부터 소리 내어 읽으면서 시작하세요.`;
+  const d=rd.idx-mn.idx;
+  if(d<=-2)return`<b>뜻은 아는데 읽기가 못 따라옵니다.</b> 한국어 한자 지식 덕분에 뜻은 짐작이 되지만, 음독이 입에 붙지 않은 상태입니다. 한국인 학습자에게 가장 흔한 형태이고, JLPT에서는 한자읽기 문제로 그대로 손해를 봅니다. 새 한자를 외울 때 뜻과 함께 <b>소리를 내어 읽는 것</b>부터 붙이세요.`;
+  if(d===-1)return`뜻이 읽기보다 조금 앞섭니다. 큰 격차는 아니지만 방향은 같습니다. 아는 한자어의 음독을 소리 내어 확인하는 것만으로 좁혀집니다.`;
+  if(d>=2)return`<b>읽을 수는 있는데 뜻이 흐릿합니다.</b> 소리는 익숙한데 의미가 정확히 잡히지 않은 상태로, 독해에서 문장을 읽고도 내용이 남지 않는 원인이 됩니다. 단어를 외울 때 예문과 함께 <b>어떤 상황에서 쓰는지</b>를 같이 담으세요.`;
+  if(d===1)return`읽기가 뜻보다 조금 앞섭니다. 균형이 나쁘지 않으니 지금 방식을 유지하면서 어휘의 폭을 넓히세요.`;
+  return`읽기와 뜻이 균형을 이루고 있습니다. 한쪽이 발목을 잡는 상태가 아니니, 다음 레벨의 한자로 그대로 올라가면 됩니다.`;
+}
+
+function reviewHtml(){
+  const items=S.qs.map((q,i)=>{
+    const picked=S.answers[i],skipped=picked===-1,ok=picked===q.answerIdx;
+    const cls=ok?'ok':(skipped?'skip':'no'),mark=ok?'✓':(skipped?'?':'✕');
+    const opts=q.opts.map((o,k)=>{
+      let cl='',lb='';
+      if(k===q.answerIdx){cl='right';lb=(k===picked)?'정답 · 내 선택':'정답'}
+      else if(k===picked){cl='mine';lb='내 선택'}
+      return `<li class="${cl}"><span class="n">${k+1}</span><span class="tx"${q.type==='reading'?' lang="ja"':''}>${o.text}</span>`+
+             (lb?`<span class="lb">${lb}</span>`:'')+`</li>`;
+    }).join('');
+    return `<details class="rv ${cls}">
+      <summary><span class="mark" aria-hidden="true">${mark}</span>
+        <span class="q" lang="ja">${q.word}</span><span class="chev" aria-hidden="true">›</span></summary>
+      <div class="rv-body">
+        <p class="rv-stem" lang="ja">${q.type==='reading'?q.sentence:q.word}</p>
+        <ol class="rv-opts">${opts}</ol>
+        ${skipped?'<p class="rv-skip">모르겠어요로 넘긴 문제입니다.</p>':''}
+        <p class="rv-exp"><b>해설</b>${q.explanation}</p>
+        <span class="rv-tag">${LABEL[q.level]} ${TYPE[q.type]}</span>
+      </div></details>`;
+  }).join('');
+  const hit=S.qs.filter((q,i)=>S.answers[i]===q.answerIdx).length;
+  return `<div class="review"><div class="review-head">
+    <h3>문제별 해설 · ${S.qs.length}문항 중 ${hit}개 정답</h3>
+    <button type="button" id="rvall">모두 펼치기</button></div>${items}</div>`;
+}
+
+function showResult(){
+  const rc=tally('reading'),mc=tally('meaning');
+  const rd=levelOf(rc),mn=levelOf(mc);
+  setDock(null);
+  app.innerHTML=`<div class="rise">
+    <span class="badge">${S.qs.length}문항 완료</span>
+    <div class="twin">
+      <div><p class="lb">읽기</p><p class="lv">${levelText(rd)}</p><p class="sub">음독·훈독</p></div>
+      <div><p class="lb">뜻</p><p class="lv">${levelText(mn)}</p><p class="sub">의미 파악</p></div>
+    </div>
+    <div class="gap">${gapText(rd,mn)}</div>
+    <h2 style="font-size:1.0625rem;margin:2rem 0 .75rem">레벨별로 보면</h2>
+    <div class="grid">`+
+      ORDER.map((lv,i)=>`<div class="r"><span class="n">${LABEL[lv]}</span>
+        <span class="c"><span>읽기 <b>${rc[i]}/2</b></span><span>뜻 <b>${mc[i]}/2</b></span></span></div>`).join('')+
+    `</div>
+    ${reviewHtml()}
+    <div class="adslot">광고 자리</div>
+    <div class="next">
+      <a href="./level-test.html">JLPT 레벨 진단 테스트</a>
+      <a href="./n5-words.html">레벨별 필수 단어</a>
+      <a href="./schedule.html">시험 일정·접수 방법</a>
+    </div>
+    <p style="margin-top:1rem"><button class="btn btn-quiet" id="again">다시 풀기 · 다른 문제가 나옵니다</button></p>
+    <p style="text-align:center"><a class="back" href="./index.html">홈으로</a></p></div>`;
+  const btn=document.getElementById('rvall');
+  if(btn)btn.onclick=()=>{
+    const ds=[...app.querySelectorAll('details.rv')],open=ds.some(d=>!d.open);
+    ds.forEach(d=>{d.open=open});
+    btn.textContent=open?'모두 접기':'모두 펼치기';
+  };
+  document.getElementById('again').onclick=start;
+  window.scrollTo(0,0);
+}
+function start(){S={qs:build(),idx:0,answers:[]};renderQuestion()}
+
+function intro(){
+  app.innerHTML=`<a class="back" href="./index.html">← 홈으로</a><div class="rise" style="padding-top:1.25rem">
+    <p class="eyebrow">한자 진단</p>
+    <h1>읽을 수 있는 것과<br>아는 것은 다릅니다</h1>
+    <p class="lede">한국어를 하는 사람은 한자의 뜻을 짐작할 수 있습니다. 그래서 뜻은 아는데 읽지 못하는 상태가 흔합니다. 20문항으로 <b>읽기 레벨과 뜻 레벨을 따로</b> 재고, 그 격차를 봅니다.</p>
+    <div class="callout"><b>N5부터 N1까지 올라갑니다</b><br>
+      레벨마다 읽기 2문항, 뜻 2문항이 나옵니다. 뒤로 갈수록 어려워지니 모르는 문제가 나오는 것이 정상입니다.
+      찍지 말고 <b>모르겠어요</b>를 누르세요. 찍어서 맞히면 결과가 실제보다 높아지고, 어디서 막히는지도 알 수 없게 됩니다.
+    </div></div>`;
+  setDock('테스트 시작',start);
+}
+
+fetch('./kanji-test-data.json')
+  .then(r=>{if(!r.ok)throw new Error(r.status);return r.json()})
+  .then(d=>{DATA=d;intro()})
+  .catch(()=>{
+    setDock(null);
+    app.innerHTML=`<div style="padding-top:3rem"><h2>문제 파일을 불러오지 못했습니다</h2>
+    <p class="err">kanji-test-data.json 파일이 kanji-test.html과 같은 폴더에 있는지 확인하세요.</p>
+    <p class="lede">파일을 더블클릭해서 여는 방식(file://)으로는 동작하지 않습니다. 로컬 서버로 열어야 합니다.</p></div>`;
+  });
+</script>
+</body>
+</html>
