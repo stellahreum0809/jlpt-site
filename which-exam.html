@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>어느 시험을 봐야 할까 — JLPT · OPIc 일본어 · SJPT</title>
+<meta name="description" content="목적, 기한, 지금 실력을 놓고 JLPT·OPIc 일본어·SJPT 중 무엇을 언제 보면 되는지 6문항으로 정리합니다.">
+<link rel="stylesheet" as="style" crossorigin
+  href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./test.css">
+<style>
+.q-stem{font-size:1.3125rem;line-height:1.6;font-weight:800;letter-spacing:-.03em;margin-bottom:1.75rem}
+.choices button.sa{font-family:var(--kr);font-size:.9375rem;line-height:1.55;letter-spacing:-.015em;
+  align-items:flex-start;padding:1.05rem 1.15rem}
+.choices button.sa .num{padding-top:.1rem}
+.choices button.sa small{display:block;color:var(--t3);font-size:.8125rem;margin-top:.2rem;line-height:1.5}
+.pick{background:var(--surface);border-radius:var(--r-xl);padding:1.4rem;margin:1.5rem 0}
+.pick+.pick{margin-top:.75rem}
+.pick.top{background:var(--blue-pale)}
+.pick .rank{font-size:.75rem;font-weight:700;color:var(--t3);margin-bottom:.4rem}
+.pick.top .rank{color:var(--blue-dark)}
+.pick h3{font-size:1.25rem;font-weight:800;letter-spacing:-.03em;margin-bottom:.5rem}
+.pick p{font-size:.9375rem;line-height:1.7;color:var(--t2);margin:0}
+.pick .why{margin-top:.75rem;padding-top:.75rem;border-top:1px solid var(--line);font-size:.875rem}
+.pick.top .why{border-color:rgba(27,100,218,.18)}
+.caveat{margin:1.75rem 0;padding:1.25rem 1.35rem;background:var(--surface-2);
+  border-radius:var(--r-lg);font-size:.875rem;line-height:1.7;color:var(--t2)}
+.caveat b{color:var(--t1)}
+@media (max-width:520px){.q-stem{font-size:1.1875rem}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div class="dock" id="dock" hidden><div class="wrap"><button class="btn" id="dockbtn"></button></div></div>
+
+<script>
+/* 각 보기가 세 시험에 주는 가중치 [jlpt, opic, sjpt] */
+const QUESTIONS=[
+  {q:'일본어 성적이 왜 필요한가요?',
+   o:[['국내 기업 취업이나 인사평가',  '이력서에 쓰는 어학 성적', [1,3,2]],
+      ['일본 기업 취업이나 일본 이직','현지 채용은 요구 조건이 다릅니다',[3,1,3]],
+      ['일본 유학이나 대학 입학',      '입학 요건으로 급수를 요구합니다',  [5,0,0]],
+      ['비자나 자격 요건',            '요건에 시험 이름이 지정돼 있습니다', [5,0,0]],
+      ['그냥 내 실력을 확인하고 싶어요','목적이 정해지지 않았다면',        [2,2,2]]]},
+
+  {q:'제출해야 할 곳에서 시험을 지정하던가요?',
+   o:[['JLPT를 요구했어요',      '',[9,0,0]],
+      ['OPIc을 요구했어요',      '',[0,9,0]],
+      ['SJPT를 요구했어요',      '',[0,0,9]],
+      ['말하기 시험이면 된다고 했어요','OPIc과 SJPT 중 고르면 됩니다',[0,3,3]],
+      ['지정 없이 자유롭게 내면 돼요','',[1,1,1]]]},
+
+  {q:'언제까지 성적이 필요한가요?',
+   o:[['한 달 안에',      'JLPT는 연 2회뿐이라 시기를 놓치면 방법이 없습니다',[0,4,4]],
+      ['두세 달 안에',    '',[1,3,3]],
+      ['반년 정도 여유가 있어요','',[3,2,2]],
+      ['1년 이상 길게 봐요','',[4,2,2]]]},
+
+  {q:'지금 일본어로 말하기는 어느 정도인가요?',
+   o:[['한 마디도 못 해요',      '말하기 시험은 응시 자체가 부담입니다',[4,1,1]],
+      ['단어는 아는데 말이 안 나와요','읽고 쓰는 쪽이 먼저 나옵니다',    [4,2,2]],
+      ['짧은 문장은 말해요',      '',[2,3,3]],
+      ['대화를 이어갈 수 있어요',  '말하기 시험에서 점수가 잘 나옵니다', [1,4,4]]]},
+
+  {q:'읽기와 한자는 어떤가요?',
+   o:[['히라가나부터 헷갈려요',    '',[2,2,2]],
+      ['읽을 수는 있는데 한자가 약해요','JLPT는 한자 비중이 큽니다',   [2,3,3]],
+      ['한자는 한국어 지식으로 버텨요','한국인에게 유리한 부분입니다',  [4,1,1]],
+      ['긴 글도 읽어요',          '',[5,1,1]]]},
+
+  {q:'시험 방식은 어느 쪽이 편한가요?',
+   o:[['종이 시험지에 마킹하는 방식','',[4,0,0]],
+      ['컴퓨터 앞에서 혼자 녹음하는 방식','',[0,3,3]],
+      ['정해진 날짜에 한 번에 끝내고 싶어요','JLPT는 연 2회 지정일에만 봅니다',[4,1,1]],
+      ['원하는 날짜에 자주 볼 수 있으면 좋겠어요','말하기 시험은 회차가 잦습니다',[0,4,4]]]}
+];
+
+const EXAM={
+  jlpt:{name:'JLPT',full:'일본어능력시험', wa:'와',
+    line:'읽기와 듣기를 재는 시험입니다. 연 2회, 7월과 12월에만 열립니다.',
+    link:'./schedule.html', linkText:'JLPT 시험 정보 보기',
+    test:'./level-test.html', testText:'JLPT 레벨 진단 테스트'},
+  opic:{name:'OPIc 일본어',full:'ACTFL 말하기 평가', wa:'와',
+    line:'컴퓨터로 1:1 인터뷰처럼 진행되는 말하기 시험입니다. 국내 채용과 인사평가에서 가장 널리 쓰입니다.',
+    link:'./index.html#exam', linkText:'OPIc 시험 정보 보기',
+    test:'./opic-test.html', testText:'OPIc 예상 등급 진단'},
+  sjpt:{name:'SJPT',full:'YBM 일본어 말하기 시험', wa:'와',
+    line:'CBT 또는 모바일로 답변을 녹음하는 말하기 시험입니다. 문법·어휘·발음·유창성을 나눠 평가합니다.',
+    link:'./index.html#exam', linkText:'SJPT 시험 정보 보기',
+    test:'./sjpt-test.html', testText:'SJPT 예상 레벨 진단'}
+};
+const KEYS=['jlpt','opic','sjpt'];
+
+const app=document.getElementById('app'),dock=document.getElementById('dock'),dockbtn=document.getElementById('dockbtn');
+let S={idx:0,score:[0,0,0],reasons:[]};
+function setDock(label,fn){
+  if(!label){dock.hidden=true;dockbtn.onclick=null;return}
+  dock.hidden=false;dockbtn.textContent=label;dockbtn.onclick=fn;
+}
+function progress(){
+  return `<div class="topbar"><div class="bar"><span style="width:${(S.idx/QUESTIONS.length*100).toFixed(1)}%"></span></div>
+          <p class="count">${S.idx+1} / ${QUESTIONS.length}</p></div>`;
+}
+function renderQuestion(){
+  const q=QUESTIONS[S.idx];
+  setDock(null);
+  app.innerHTML=progress()+`<div class="rise">
+    <p class="q-stem">${q.q}</p><div class="choices">`+
+    q.o.map((o,i)=>`<button class="sa" data-i="${i}"><span class="num">${i+1}</span><span>${o[0]}`+
+      (o[1]?`<small>${o[1]}</small>`:'')+`</span></button>`).join('')+
+    `</div></div>`;
+  app.querySelectorAll('button[data-i]').forEach(b=>{
+    b.onclick=()=>{
+      const o=q.o[+b.dataset.i];
+      o[2].forEach((v,k)=>S.score[k]+=v);
+      S.reasons.push({q:q.q,a:o[0]});
+      S.idx++;
+      S.idx<QUESTIONS.length?renderQuestion():showResult();
+    };
+  });
+  window.scrollTo(0,0);
+}
+function showResult(){
+  const ranked=KEYS.map((k,i)=>({k,v:S.score[i]})).sort((a,b)=>b.v-a.v);
+  const total=S.score.reduce((a,b)=>a+b,0)||1;
+  const tie=(ranked[0].v-ranked[1].v)<=1;
+  setDock(null);
+  const cards=ranked.map((r,i)=>{
+    const e=EXAM[r.k],pct=Math.round(r.v/total*100);
+    return `<div class="pick${i===0?' top':''}">
+      <p class="rank">${i===0?'가장 맞는 시험':(i===1?'다음 후보':'지금은 후순위')} · 적합도 ${pct}%</p>
+      <h3>${e.name}</h3>
+      <p>${e.line}</p>
+      <p class="why"><a href="${e.test}">${e.testText}</a> · <a href="${e.link}">${e.linkText}</a></p>
+    </div>`;
+  }).join('');
+  app.innerHTML=`<div class="rise">
+    <span class="badge">${QUESTIONS.length}문항 완료</span>
+    <p class="verdict">${EXAM[ranked[0].k].name}<small>${tie?'다만 '+EXAM[ranked[1].k].name+EXAM[ranked[1].k].wa+' 차이가 크지 않습니다. 아래 설명을 함께 보고 정하세요.':'답변을 보면 이 시험이 가장 잘 맞습니다.'}</small></p>
+    ${cards}
+    <div class="callout"><b>둘 다 봐도 됩니다</b><br>
+      JLPT와 말하기 시험은 서로 대체하지 않습니다. JLPT는 읽고 듣는 능력을, OPIc과 SJPT는 말하는 능력을 증명합니다.
+      기한이 급하면 말하기 시험을 먼저 보고, JLPT는 다음 회차를 노리는 조합이 현실적입니다.
+      JLPT는 <b>연 2회뿐</b>이라 시기를 놓치면 반년을 기다려야 한다는 점만 기억하세요.
+    </div>
+    <div class="caveat">
+      <b>이 결과는 참고용입니다.</b> 제출처가 시험을 지정했다면 그 지정이 무엇보다 우선합니다.
+      회사나 학교의 요강을 먼저 확인하시고, 이 결과는 지정이 없을 때 고르는 기준으로 쓰세요.
+    </div>
+    <div class="adslot">광고 자리</div>
+    <p style="margin-top:1rem"><button class="btn btn-quiet" id="again">다시 해보기</button></p>
+    <p style="text-align:center"><a class="back" href="./index.html">홈으로</a></p></div>`;
+  document.getElementById('again').onclick=()=>{S={idx:0,score:[0,0,0],reasons:[]};intro()};
+  window.scrollTo(0,0);
+}
+function intro(){
+  app.innerHTML=`<a class="back" href="./index.html">← 홈으로</a><div class="rise" style="padding-top:1.25rem">
+    <p class="eyebrow">시험 고르기</p>
+    <h1>어느 시험을<br>봐야 할까</h1>
+    <p class="lede">JLPT, OPIc 일본어, SJPT는 재는 능력이 다릅니다. 목적과 기한, 지금 실력을 놓고 6문항으로 정리해봅니다.</p>
+    <div class="callout"><b>먼저 확인할 것</b><br>
+      제출할 곳에서 시험을 지정했다면 고민할 필요가 없습니다. 그 시험을 보면 됩니다.
+      이 페이지는 <b>지정이 없거나 선택할 수 있을 때</b> 쓰는 기준입니다.
+    </div></div>`;
+  setDock('시작하기',()=>{S={idx:0,score:[0,0,0],reasons:[]};renderQuestion()});
+}
+intro();
+</script>
+</body>
+</html>
