@@ -59,12 +59,15 @@
 | 오늘의 문법 | `daily-grammar.html` | 예정 |
 
 ### 대분류 4 — 시험 정보
-| 페이지 | 파일 |
-|---|---|
-| 시험 일정과 접수 기간 | `guide/schedule.html` |
-| 접수 방법과 준비물 | `guide/apply.html` |
-| 합격 기준과 점수 계산 | `guide/score.html` |
-| 시험 당일 안내 | `guide/exam-day.html` |
+| 페이지 | 파일 | 상태 |
+|---|---|---|
+| 시험 일정과 접수 기간 | `schedule.html` | 완료 |
+| 접수 방법과 준비물 | `apply.html` | 완료 |
+| 합격 기준과 점수 계산 | `score.html` | 완료 |
+| 시험 당일 안내 | `exam-day.html` | 완료 |
+
+시험 정보는 회차마다 날짜가 바뀐다. 네 페이지 모두 상단에 `.updated`로 확인 날짜를 적고,
+하단 callout에 공식 홈페이지 확인 안내를 둔다. 회차가 바뀌면 이 네 페이지를 함께 손봐야 한다.
 
 ### 기본 페이지 (애드센스 필수)
 | 페이지 | 파일 | 상태 |
@@ -97,7 +100,7 @@
 |---|---|---|
 | 도구 페이지 | 루트 | `verb-dict.html` |
 | 도구 데이터 | 루트 | `verb-dict-data.json` |
-| 글 | `guide/` | `guide/n5-words.html` |
+| 글 | 루트 (당초 `guide/` 계획이었으나 현재는 루트) | `n5-words.html` |
 | 기본 페이지 | 루트 | `about.html` |
 | 공통 스타일 | 루트 | `style.css` |
 
