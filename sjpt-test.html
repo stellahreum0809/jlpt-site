@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SJPT 예상 레벨 진단</title>
+<meta name="description" content="12문항 자가진단으로 SJPT 예상 레벨 구간을 확인합니다. 실제 시험과 같은 문법·어휘·발음·유창성 네 영역으로 나눠 봅니다.">
+<link rel="stylesheet" as="style" crossorigin
+  href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./test.css">
+<style>
+.q-area{font-size:.8125rem;font-weight:700;color:var(--blue);margin-bottom:.5rem}
+.q-part{font-size:.8125rem;color:var(--t3);font-weight:500;margin-left:.4rem}
+.q-stem{font-size:1.3125rem;line-height:1.6;font-weight:800;letter-spacing:-.03em;margin-bottom:1.75rem}
+.choices button.sa{font-family:var(--kr);font-size:.9375rem;line-height:1.55;letter-spacing:-.015em;
+  align-items:flex-start;padding:1.05rem 1.15rem}
+.choices button.sa .num{padding-top:.1rem}
+.scale{display:flex;flex-wrap:wrap;gap:.25rem;margin:1.25rem 0 .6rem}
+.scale span{flex:1 1 auto;text-align:center;min-width:1.9rem;font-size:.75rem;font-weight:700;
+  color:var(--t3);background:var(--surface-2);border-radius:7px;padding:.35rem .2rem}
+.scale span.on{background:var(--blue);color:#fff}
+.scale-key{display:flex;justify-content:space-between;font-size:.75rem;color:var(--t3);margin-bottom:2rem}
+.caveat{margin:1.75rem 0;padding:1.25rem 1.35rem;background:var(--surface-2);
+  border-radius:var(--r-lg);font-size:.875rem;line-height:1.7;color:var(--t2)}
+.caveat b{color:var(--t1)}
+@media (max-width:520px){.q-stem{font-size:1.1875rem}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div class="dock" id="dock" hidden><div class="wrap"><button class="btn" id="dockbtn"></button></div></div>
+
+<script>
+/* SJPT는 문법·어휘·발음·유창성 네 영역을 나눠 평가한다.
+   문항도 그 네 영역에 맞춰 세 개씩 두었다. */
+const AREA={grammar:'문법',vocab:'어휘',pron:'발음',fluency:'유창성'};
+const AREA_ORDER=['grammar','vocab','pron','fluency'];
+
+/* 레벨 1~10 — 1~2 하급, 3~7 중급, 8~10 상급 */
+const BAND=n=>n<=2?'하급':(n<=7?'중급':'상급');
+const LEVEL_LINE={
+  1:'단어를 하나씩 말하는 단계',
+  2:'외워둔 표현으로 인사와 소개를 하는 단계',
+  3:'짧은 문장으로 기본 정보를 전달하는 단계',
+  4:'익숙한 주제를 문장으로 설명하는 단계',
+  5:'문장을 이어 붙여 설명하는 단계',
+  6:'익숙한 주제라면 막힘 없이 이어가는 단계',
+  7:'낯선 주제도 어느 정도 대응하는 단계',
+  8:'의견을 근거와 함께 제시하는 단계',
+  9:'상황 대응과 이야기 구성이 자연스러운 단계',
+  10:'원어민에 가까운 유창함을 보이는 단계'
+};
+
+const QUESTIONS=[
+  {area:'grammar', part:'질의 응답',
+   q:'어제 한 일과 내일 할 일을 시제를 구분해서 말할 수 있나요?',
+   o:[['과거형·미래형을 잘 몰라요',1],
+      ['알지만 말할 때는 거의 현재형으로 말해요',3],
+      ['대체로 구분하는데 가끔 틀려요',5],
+      ['거의 정확하게 구분해요',7],
+      ['의식하지 않아도 자연스럽게 나와요',9]]},
+
+  {area:'grammar', part:'스토리 구성',
+   q:'「〜たり」「〜ながら」「〜ので」처럼 문장을 잇는 문형을 쓰나요?',
+   o:[['거의 못 써요',1],
+      ['〜て 정도만 써요',3],
+      ['몇 가지는 쓰지만 늘 같은 것만 써요',5],
+      ['상황에 맞게 골라 써요',7],
+      ['긴 문장도 자연스럽게 엮어요',9]]},
+
+  {area:'grammar', part:'상황 대응',
+   q:'상대에 따라 정중한 말과 편한 말을 구분하나요?',
+   o:[['구분을 잘 못해요',1],
+      ['です·ます만 계속 써요',3],
+      ['상황에 따라 바꾸려 하지만 섞여요',5],
+      ['대체로 알맞게 구분해요',7],
+      ['겸양·존경 표현까지 상황에 맞게 써요',10]]},
+
+  {area:'vocab', part:'자기 소개',
+   q:'취미나 하는 일에 대해 설명할 때 단어가 떠오르나요?',
+   o:[['거의 떠오르지 않아요',1],
+      ['아주 기본적인 단어만 나와요',3],
+      ['같은 단어를 반복하지만 설명은 돼요',5],
+      ['필요한 단어가 대체로 떠올라요',7],
+      ['구체적인 표현을 골라 쓸 수 있어요',9]]},
+
+  {area:'vocab', part:'짧은 응답',
+   q:'처음 보는 사진이나 장면을 설명해야 한다면?',
+   o:[['무엇을 말해야 할지 모르겠어요',1],
+      ['보이는 사물의 이름만 말해요',2],
+      ['간단한 문장으로 묘사해요',5],
+      ['위치·색·상태까지 설명해요',7],
+      ['분위기나 추측까지 덧붙여요',9]]},
+
+  {area:'vocab', part:'의견 제시',
+   q:'어떤 주제에 찬성하거나 반대하는 이유를 말해야 한다면?',
+   o:[['의견 자체를 일본어로 말하기 어려워요',1],
+      ['좋다·싫다 정도만 말해요',3],
+      ['이유를 한 가지는 붙여요',4],
+      ['이유를 두세 가지 들어 설명해요',7],
+      ['근거를 들고 반대 의견까지 짚어요',10]]},
+
+  {area:'pron', part:'질의 응답',
+   q:'장음·촉음·탁음을 구분해서 발음하나요? (おばさん / おばあさん 같은)',
+   o:[['차이를 잘 모르겠어요',1],
+      ['알지만 말할 때 잘 안 돼요',3],
+      ['천천히 말하면 구분돼요',5],
+      ['대체로 정확해요',8],
+      ['빠르게 말해도 정확해요',10]]},
+
+  {area:'pron', part:'신속한 응답',
+   q:'일본어로 말할 때 상대가 되묻는 일이 얼마나 있나요?',
+   o:[['거의 매번 되물어요',1],
+      ['자주 되물어요',3],
+      ['가끔 되물어요',6],
+      ['거의 되묻지 않아요',8],
+      ['되묻는 일이 없어요',10]]},
+
+  {area:'pron', part:'스토리 구성',
+   q:'억양은 어떤가요?',
+   o:[['한국어 억양 그대로 말해요',1],
+      ['어색하다는 말을 들어요',3],
+      ['단어 단위로는 비슷하게 나와요',5],
+      ['문장 억양이 대체로 자연스러워요',7],
+      ['원어민이 자연스럽다고 해요',9]]},
+
+  {area:'fluency', part:'신속한 응답',
+   q:'생각할 시간 없이 바로 답해야 할 때는 어떤가요?',
+   o:[['아무 말도 못 해요',1],
+      ['단어 하나 정도 겨우 나와요',3],
+      ['짧게라도 문장으로 답해요',5],
+      ['대체로 바로 답해요',7],
+      ['생각하는 속도로 말이 나와요',10]]},
+
+  {area:'fluency', part:'상황 대응',
+   q:'말하다가 모르는 단어에서 막히면 어떻게 하나요?',
+   o:[['거기서 대화가 끊겨요',1],
+      ['한국어를 섞어요',3],
+      ['한참 생각하다 겨우 이어가요',5],
+      ['아는 말로 돌려서 설명해요',8],
+      ['막히는 티 없이 자연스럽게 넘어가요',10]]},
+
+  {area:'fluency', part:'스토리 구성',
+   q:'그림 여러 장을 보고 하나의 이야기로 만들어 말해야 한다면?',
+   o:[['그림마다 단어만 말해요',1],
+      ['그림마다 문장 하나씩 말해요',2],
+      ['순서를 이어 이야기로 만들어요',5],
+      ['앞뒤를 연결하고 인물의 감정도 넣어요',7],
+      ['기승전결을 갖춰 자연스럽게 이야기해요',10]]}
+];
+
+const app=document.getElementById('app'),dock=document.getElementById('dock'),dockbtn=document.getElementById('dockbtn');
+let S={idx:0,answers:[]};
+function setDock(label,fn){
+  if(!label){dock.hidden=true;dockbtn.onclick=null;return}
+  dock.hidden=false;dockbtn.textContent=label;dockbtn.onclick=fn;
+}
+function areaAvg(){
+  const acc={};AREA_ORDER.forEach(a=>acc[a]=[]);
+  QUESTIONS.forEach((q,i)=>acc[q.area].push(S.answers[i]));
+  const out={};
+  AREA_ORDER.forEach(a=>out[a]=acc[a].reduce((x,y)=>x+y,0)/acc[a].length);
+  return out;
+}
+/* 종합 = 전체 평균 60% + 가장 약한 영역 40%
+   SJPT는 네 영역을 나눠 평가하므로, 한 영역이 처지면 종합도 끌려 내려간다. */
+function level(){
+  const avg=areaAvg(),vals=AREA_ORDER.map(a=>avg[a]);
+  const mean=vals.reduce((x,y)=>x+y,0)/vals.length;
+  const worst=Math.min(...vals);
+  return Math.max(1,Math.min(10,Math.round(mean*0.6+worst*0.4)));
+}
+
+function progress(){
+  const done=S.idx,total=QUESTIONS.length;
+  return `<div class="topbar"><div class="bar"><span style="width:${(done/total*100).toFixed(1)}%"></span></div>
+          <p class="count">${done+1} / ${total}</p></div>`;
+}
+function renderQuestion(){
+  const q=QUESTIONS[S.idx];
+  setDock(null);
+  app.innerHTML=progress()+`<div class="rise">
+    <p class="q-area">${AREA[q.area]}<span class="q-part">${q.part} 파트</span></p>
+    <p class="q-stem">${q.q}</p>
+    <div class="choices">`+
+    q.o.map((o,i)=>`<button class="sa" data-i="${i}"><span class="num">${i+1}</span><span>${o[0]}</span></button>`).join('')+
+    `</div></div>`;
+  app.querySelectorAll('button[data-i]').forEach(b=>{
+    b.onclick=()=>{S.answers.push(q.o[+b.dataset.i][1]);S.idx++;
+      S.idx<QUESTIONS.length?renderQuestion():showResult()};
+  });
+  window.scrollTo(0,0);
+}
+function scaleHtml(lo,hi){
+  let h='<div class="scale">';
+  for(let n=1;n<=10;n++)h+=`<span class="${n>=lo&&n<=hi?'on':''}">${n}</span>`;
+  h+='</div><div class="scale-key"><span>1 · 하급</span><span>중급</span><span>상급 · 10</span></div>';
+  return h;
+}
+function areasHtml(){
+  const avg=areaAvg();
+  return '<div class="areas">'+AREA_ORDER.map(a=>{
+    const v=avg[a];
+    return `<div class="area"><span class="name" style="flex:0 0 3.5rem">${AREA[a]}</span>
+      <span class="track"><span style="width:${(v/10*100).toFixed(0)}%"></span></span>
+      <span class="val">Lv ${v.toFixed(1)}</span></div>`;
+  }).join('')+'</div>';
+}
+function weakest(){
+  const avg=areaAvg();
+  let w=AREA_ORDER[0];
+  AREA_ORDER.forEach(a=>{if(avg[a]<avg[w])w=a});
+  return w;
+}
+const ADVICE={
+  grammar:'문법이 가장 처집니다. SJPT는 문법을 따로 채점하기 때문에 여기가 낮으면 다른 영역이 좋아도 레벨이 올라가지 않습니다. 시제와 문장 연결 문형부터 잡으세요.',
+  vocab:'어휘가 가장 처집니다. 단어를 더 외우는 것보다, 아는 단어로 돌려 말하는 연습이 시험에서는 더 효과가 큽니다. 하나의 대상을 세 가지 표현으로 설명해보세요.',
+  pron:'발음이 가장 처집니다. 장음·촉음·억양은 짧은 시간에 고치기 어렵지만 점수 차이는 확실합니다. 짧은 문장을 따라 읽고 녹음해 비교하는 방법이 가장 빠릅니다.',
+  fluency:'유창성이 가장 처집니다. 아는 것을 늘리는 것보다 꺼내는 속도의 문제입니다. 준비 없이 30초 말하기를 매일 반복하면 가장 빨리 올라갑니다.'
+};
+function showResult(){
+  const lv=level(),hi=Math.min(10,lv+1),w=weakest();
+  setDock(null);
+  app.innerHTML=`<div class="rise">
+    <span class="badge">12문항 완료</span>
+    <p class="verdict">Level ${lv}~${hi}<small>${BAND(lv)} 구간 · ${LEVEL_LINE[lv]}</small></p>
+    ${scaleHtml(lv,hi)}
+    <h2 style="font-size:1.0625rem;margin-bottom:.75rem">영역별로 보면</h2>
+    ${areasHtml()}
+    <p class="note" style="margin-top:-1rem">SJPT는 문법·어휘·발음·유창성을 나눠 평가합니다. 종합 레벨은 평균만이 아니라 <b>가장 낮은 영역</b>에도 끌려가므로, 약한 곳을 올리는 편이 효율적입니다.</p>
+    <div class="callout"><b>먼저 손볼 곳</b><br>${ADVICE[w]}</div>
+    <div class="caveat">
+      <b>이 결과는 자가진단입니다.</b> 실제 SJPT는 응시자가 녹음한 답변을 전문 평가자가 듣고 판정합니다.
+      이 페이지는 녹음을 채점하지 않고, 여러분이 고른 답을 시험의 평가 영역에 비추어 계산한 것입니다.
+      한 레벨을 정확히 맞히기보다 <b>어느 구간에 있고 무엇이 약한지</b>를 보는 용도로 쓰세요.
+    </div>
+    <div class="adslot">광고 자리</div>
+    <div class="next">
+      <a href="./index.html#exam">SJPT 시험 정보 보기</a>
+      <a href="./opic-test.html">OPIc 일본어 예상 등급 진단</a>
+      <a href="./level-test.html">JLPT 레벨 진단 테스트</a>
+    </div>
+    <p style="margin-top:1rem"><button class="btn btn-quiet" id="again">다시 진단하기</button></p>
+    <p style="text-align:center"><a class="back" href="./index.html">홈으로</a></p></div>`;
+  document.getElementById('again').onclick=()=>{S={idx:0,answers:[]};intro()};
+  window.scrollTo(0,0);
+}
+function intro(){
+  app.innerHTML=`<a class="back" href="./index.html">← 홈으로</a><div class="rise" style="padding-top:1.25rem">
+    <p class="eyebrow">SJPT</p>
+    <h1>지금 시험을 보면<br>어느 레벨이 나올까</h1>
+    <p class="lede">SJPT는 컴퓨터나 모바일로 답변을 녹음하는 말하기 시험입니다. 정답을 맞히는 방식으로는 잴 수 없어서, 실제 시험의 평가 영역인 문법·어휘·발음·유창성을 12문항으로 나눠 확인합니다.</p>
+    <div class="callout"><b>솔직하게 고르는 것이 핵심입니다</b><br>
+      "할 수 있을 것 같다"가 아니라 <b>지금 당장 준비 없이 되는가</b>로 고르세요.
+      스스로를 높게 잡으면 이 진단도 실제보다 높은 레벨을 내놓습니다.
+    </div></div>`;
+  setDock('진단 시작',()=>{S={idx:0,answers:[]};renderQuestion()});
+}
+intro();
+</script>
+</body>
+</html>
