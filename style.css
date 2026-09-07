@@ -39,7 +39,7 @@ a{color:inherit;text-decoration:none}
   padding:calc(1.5rem + env(safe-area-inset-top,0px)) 0 1.25rem;
   border-bottom:1px solid var(--line);margin-bottom:.5rem;
 }
-.nav .logo{font-size:1.0625rem;font-weight:800;letter-spacing:-.03em;margin-right:auto}
+.nav .logo{font-size:1.0625rem;font-weight:800;letter-spacing:.005em;margin-right:auto}
 .nav .logo .dot{color:var(--blue)}
 .nav a.item{font-size:.9375rem;font-weight:600;color:var(--t2);transition:color .15s var(--ease)}
 .nav a.item:hover,.nav a.item[aria-current="page"]{color:var(--blue)}

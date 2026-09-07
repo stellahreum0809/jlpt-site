@@ -134,6 +134,55 @@ p.lede{color:var(--t2);font-size:1.0625rem}
 .adslot{margin:2rem 0;padding:2.25rem;text-align:center;background:var(--surface-2);
   border-radius:var(--r-xl);color:var(--t3);font-size:.875rem}
 .err{color:var(--red)}
+
+/* 문제별 해설 */
+.review{margin:1.5rem 0}
+.review-head{display:flex;align-items:baseline;justify-content:space-between;gap:1rem;margin-bottom:.85rem}
+.review-head h3{font-size:.9375rem;font-weight:700}
+.review-head button{cursor:pointer;font:inherit;font-size:.8125rem;font-weight:600;
+  color:var(--t3);background:none;border:none;padding:.2rem}
+.review-head button:hover{color:var(--blue)}
+.review-head button:focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:4px}
+.rv{background:var(--surface);border-radius:var(--r-md)}
+.rv+.rv{margin-top:.5rem}
+.rv>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:.75rem;
+  padding:.95rem 1.1rem;border-radius:var(--r-md)}
+.rv>summary::-webkit-details-marker{display:none}
+.rv>summary:hover{background:var(--surface-2)}
+.rv>summary:focus-visible{outline:2px solid var(--blue);outline-offset:-2px}
+.rv .mark{flex:0 0 1.375rem;height:1.375rem;border-radius:99px;display:flex;
+  align-items:center;justify-content:center;font-size:.8125rem;font-weight:700;color:#fff}
+.rv.ok .mark{background:var(--blue)}
+.rv.no .mark{background:var(--red)}
+.rv.skip .mark{background:var(--t3)}
+.rv .q{flex:1;min-width:0;font-family:var(--jp);font-size:.9375rem;letter-spacing:0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rv .chev{flex:0 0 auto;color:var(--t3);font-size:1.25rem;line-height:1;
+  transition:transform .2s var(--ease)}
+.rv[open] .chev{transform:rotate(90deg)}
+.rv-body{padding:1.1rem;border-top:1px solid var(--line)}
+.rv-body .passage{font-size:.9375rem;line-height:1.95;background:#fff;
+  border-radius:var(--r-md);padding:1rem 1.1rem;margin-bottom:1rem}
+.rv-stem{font-family:var(--jp);font-size:1.0625rem;font-weight:700;line-height:1.75;
+  letter-spacing:0;margin-bottom:.9rem}
+.rv-opts{list-style:none;display:flex;flex-direction:column;gap:.4rem}
+.rv-opts li{font-family:var(--jp);font-size:.9375rem;line-height:1.6;letter-spacing:0;
+  background:#fff;border:1px solid var(--line);border-radius:10px;padding:.65rem .8rem;
+  display:flex;gap:.6rem;align-items:baseline;color:var(--t2)}
+.rv-opts .n{font-family:var(--kr);font-size:.75rem;font-weight:700;color:var(--t3);flex:0 0 auto}
+.rv-opts .tx{flex:1}
+.rv-opts .lb{font-family:var(--kr);font-size:.6875rem;font-weight:700;flex:0 0 auto;
+  border-radius:99px;padding:.15rem .5rem;white-space:nowrap}
+.rv-opts li.right{border-color:var(--blue);background:var(--blue-pale);color:var(--t1)}
+.rv-opts li.right .lb{background:var(--blue);color:#fff}
+.rv-opts li.mine{border-color:var(--red);background:#FFF0F1;color:var(--t1)}
+.rv-opts li.mine .lb{background:var(--red);color:#fff}
+.rv-skip{font-size:.875rem;color:var(--t3);margin-top:.75rem}
+.rv-exp{font-size:.9375rem;line-height:1.7;color:var(--t2);
+  margin-top:1rem;padding-top:1rem;border-top:1px solid var(--line)}
+.rv-exp b{display:block;font-size:.8125rem;color:var(--t1);margin-bottom:.3rem}
+.rv-tag{display:inline-block;font-size:.75rem;letter-spacing:0;color:var(--t3);
+  background:var(--surface-2);border-radius:8px;padding:.25rem .55rem;margin-top:.85rem}
 @media (max-width:520px){
   .topbar{padding-top:2rem}
   .back{padding-top:1.75rem}
@@ -307,6 +356,51 @@ function unknownNote(){
   return u?`<p class="note">모르겠어요로 넘긴 ${u}문항은 틀린 것으로 계산했습니다.</p>`:'';
 }
 
+/* 문제별 해설 — 푼 순서대로 정답·오답·해설을 펼쳐 볼 수 있게 */
+function reviewHtml(){
+  let no=0;
+  const items=[];
+  S.blocks.forEach(b=>b.questions.forEach((q,i)=>{
+    no++;
+    const picked=b.answers[i],skipped=picked===UNKNOWN,ok=picked===q.answer;
+    const cls=ok?'ok':(skipped?'skip':'no');
+    const mark=ok?'✓':(skipped?'?':'✕');
+    const opts=q.options.map((o,k)=>{
+      let cl='',lb='';
+      if(k===q.answer){cl='right';lb=(k===picked)?'정답 · 내 선택':'정답';}
+      else if(k===picked){cl='mine';lb='내 선택';}
+      return `<li class="${cl}"><span class="n">${k+1}</span><span class="tx" lang="ja">${o}</span>`+
+             (lb?`<span class="lb">${lb}</span>`:'')+`</li>`;
+    }).join('');
+    items.push(`<details class="rv ${cls}">
+      <summary><span class="mark" aria-hidden="true">${mark}</span>
+        <span class="q" lang="ja">${q.prompt}</span><span class="chev" aria-hidden="true">›</span></summary>
+      <div class="rv-body">`+
+        (q.passage?`<div class="passage" lang="ja">${q.passage}</div>`:'')+
+        `<p class="rv-stem" lang="ja">${q.prompt}</p>
+        <ol class="rv-opts">${opts}</ol>`+
+        (skipped?`<p class="rv-skip">모르겠어요로 넘긴 문제입니다.</p>`:'')+
+        `<p class="rv-exp"><b>해설</b>${q.explanation||'해설을 준비 중입니다.'}</p>`+
+        (q.anchor?`<span class="rv-tag" lang="ja">${q.anchor}</span>`:'')+
+      `</div></details>`);
+  }));
+  if(!items.length)return '';
+  const hit=S.blocks.reduce((n,b)=>n+score(b),0);
+  return `<div class="review"><div class="review-head">
+      <h3>문제별 해설 · ${no}문항 중 ${hit}개 정답</h3>
+      <button type="button" id="rvall">모두 펼치기</button>
+    </div>${items.join('')}</div>`;
+}
+function bindReview(){
+  const btn=document.getElementById('rvall');
+  if(!btn)return;
+  btn.onclick=()=>{
+    const ds=[...app.querySelectorAll('details.rv')],open=ds.some(d=>!d.open);
+    ds.forEach(d=>{d.open=open});
+    btn.textContent=open?'모두 접기':'모두 펼치기';
+  };
+}
+
 function showStage1(){
   S.band1=band1();saveSeen();
   if(!STAGE2[S.band1])return showFinal(true);
@@ -336,6 +430,7 @@ function showFinal(early){
     ${areasHtml()}${unknownNote()}
     ${adv?'<p class="lede">어휘와 문법은 상위 레벨에 도달해 있습니다. 독해는 지문이 길어질수록 부담이 커지니 그쪽 비중을 늘려보세요.</p>':''}
     ${pts.length?`<div class="points"><h3>틀렸거나 모르겠다고 한 포인트</h3><ul>${pts.map(p=>`<li lang="ja">${p}</li>`).join('')}</ul></div>`:''}
+    ${reviewHtml()}
     <div class="adslot">광고 자리</div>
     <div class="next">
       <a href="./n5-words.html">레벨별 필수 단어</a>
@@ -345,6 +440,7 @@ function showFinal(early){
     <p style="margin-top:1rem"><button class="btn btn-quiet" id="again">다시 풀기 · 다른 문제가 나옵니다</button></p>
     <p style="text-align:center"><a class="back" href="./index.html">홈으로</a></p></div>`;
   setDock(null);
+  bindReview();
   document.getElementById('again').onclick=()=>{
     S={stage:1,blocks:[],cur:null,used:new Set(),seen:S.seen,band1:null};
     loadSeen();startBlock('n5');
