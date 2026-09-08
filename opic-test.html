@@ -23,7 +23,29 @@
 .caveat{margin:1.75rem 0;padding:1.25rem 1.35rem;background:var(--surface-2);
   border-radius:var(--r-lg);font-size:.875rem;line-height:1.7;color:var(--t2)}
 .caveat b{color:var(--t1)}
-@media (max-width:520px){.q-stem{font-size:1.1875rem}}
+/* 2차 실력 문항 */
+.mock-stem{font-family:var(--jp);font-size:1.25rem;line-height:1.8;font-weight:700;
+  letter-spacing:0;margin-bottom:1.5rem}
+.mock-stem.ko{font-family:var(--kr);font-size:1.1875rem;line-height:1.65;letter-spacing:-.02em}
+.q-band{font-size:.8125rem;font-weight:700;color:var(--blue);margin-bottom:.5rem}
+.q-band span{color:var(--t3);font-weight:500;margin-left:.4rem}
+/* 두 결과를 나란히 */
+.twin{display:flex;gap:.75rem;margin:1.5rem 0}
+.twin>div{flex:1;background:var(--surface);border-radius:var(--r-xl);padding:1.3rem 1.1rem;text-align:center}
+.twin .lb{font-size:.8125rem;font-weight:600;color:var(--t3);margin-bottom:.5rem}
+.twin .lv{font-size:2rem;font-weight:800;letter-spacing:-.03em;line-height:1.1}
+.twin .sub{font-size:.75rem;color:var(--t3);margin-top:.35rem}
+.gap{margin:1.5rem 0;padding:1.35rem;background:var(--blue-pale);border-radius:var(--r-lg);
+  font-size:.9375rem;line-height:1.75;color:var(--t2)}
+.gap b{color:var(--t1)}
+.grid{background:var(--surface);border-radius:var(--r-xl);padding:.4rem 1.3rem;margin:1.5rem 0}
+.grid .r{display:flex;align-items:center;gap:1rem;padding:.85rem 0}
+.grid .r+.r{border-top:1px solid var(--line)}
+.grid .n{flex:0 0 5rem;font-weight:700;font-size:.875rem}
+.grid .c{flex:1;font-size:.875rem;color:var(--t2);text-align:right}
+.grid .c b{color:var(--t1)}
+.grid .r.fail .n,.grid .r.fail .c{color:var(--t3)}
+@media (max-width:520px){.q-stem{font-size:1.1875rem}.twin .lv{font-size:1.75rem}}
 </style>
 </head>
 <body>
@@ -150,7 +172,10 @@ const QUESTIONS=[
 ];
 
 const app=document.getElementById('app'),dock=document.getElementById('dock'),dockbtn=document.getElementById('dockbtn');
-let S={idx:0,answers:[]};
+let MOCK=null;
+let S={stage:1,idx:0,answers:[],mq:[],ma:[]};
+const rnd=n=>Math.floor(Math.random()*n);
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=rnd(i+1);[a[i],a[j]]=[a[j],a[i]]}return a}
 
 function setDock(label,fn){
   if(!label){dock.hidden=true;dockbtn.onclick=null;return}
@@ -179,15 +204,14 @@ function areaAvg(){
   return out;
 }
 
-function progress(){
-  const done=S.idx,total=QUESTIONS.length;
+function progress(done,total){
   return `<div class="topbar"><div class="bar"><span style="width:${(done/total*100).toFixed(1)}%"></span></div>
           <p class="count">${done+1} / ${total}</p></div>`;
 }
 function renderQuestion(){
   const q=QUESTIONS[S.idx];
   setDock(null);
-  app.innerHTML=progress()+`<div class="rise">
+  app.innerHTML=progress(S.idx,QUESTIONS.length)+`<div class="rise">
     <p class="q-area">${AREA[q.area]}</p>
     <p class="q-stem">${q.q}</p>
     <div class="choices">`+
@@ -202,7 +226,7 @@ function answer(val){
   S.answers.push(val);
   S.idx++;
   if(S.idx<QUESTIONS.length)return renderQuestion();
-  showResult();
+  showStage1();
 }
 
 function scaleHtml(cur){
@@ -232,32 +256,153 @@ function nextStep(i){
   ];
   return tips[i];
 }
-function showResult(){
+/* ── 1차 결과 · 2차 안내 ────────────────────────────── */
+function showStage1(){
   const i=grade(),lv=LEVELS[i];
-  setDock(null);
   app.innerHTML=`<div class="rise">
-    <span class="badge">12문항 완료</span>
+    <span class="badge">1차 설문 완료</span>
     <p class="verdict">${lv.code}<small>${lv.full} · ${lv.line}</small></p>
     ${scaleHtml(i)}
     <h2 style="font-size:1.0625rem;margin-bottom:.75rem">영역별로 보면</h2>
     ${areasHtml()}
-    <p class="note" style="margin-top:-1rem">영역별 표시는 그 영역의 평균이고, 위의 등급은 <b>모든 영역에서 일관되게 유지되는 수준</b>입니다. 그래서 영역 평균보다 한 단계 낮게 나오기도 합니다.</p>
-    <div class="callout"><b>한 단계 올리려면</b><br>${nextStep(i)}</div>
+    <p class="note" style="margin-top:-1rem">영역별 표시는 그 영역의 평균이고, 위의 등급은 <b>모든 영역에서 일관되게 유지되는 수준</b>입니다.</p>
+    <div class="callout"><b>여기까지는 스스로 매긴 점수입니다</b><br>
+      설문은 본인이 생각하는 수준을 되돌려줄 뿐입니다. 실제로 되는지는 풀어봐야 압니다.
+      이어지는 <b>15문항</b>은 말하기에 필요한 문형·어휘·경어를 직접 묻습니다. 채점은 자동으로 됩니다.
+      <br><br>설문 등급과 실측 등급이 얼마나 벌어지는지가 지금 가장 쓸모 있는 정보입니다.
+    </div>
+    <div class="adslot">광고 자리</div></div>`;
+  setDock('2차 실력 문항 풀기',startMock);
+  bindReviewToggle();
+  window.scrollTo(0,0);
+}
+
+/* ── 2차 실력 문항 ──────────────────────────────────── */
+function buildMock(){
+  const out=[];
+  MOCK.bands.forEach(b=>{
+    shuffle([...b.questions]).slice(0,3).forEach(q=>{
+      const opts=q.options.map((text,k)=>({text,correct:k===q.answer}));
+      shuffle(opts);
+      out.push({...q,band:b.id,bandLabel:b.label,pass:b.pass,opts,answerIdx:opts.findIndex(o=>o.correct)});
+    });
+  });
+  return out;
+}
+function startMock(){
+  S.stage=2;S.mq=buildMock();S.ma=[];
+  renderMock();
+}
+function renderMock(){
+  const n=S.ma.length,q=S.mq[n];
+  setDock(null);
+  const isJa=/[ぁ-んァ-ヶ一-龯]/.test(q.prompt);
+  app.innerHTML=progress(n,S.mq.length)+`<div class="rise">
+    <p class="q-band">${q.bandLabel}<span>${q.type}</span></p>
+    <p class="mock-stem${isJa?'':' ko'}"${isJa?' lang="ja"':''}>${q.prompt}</p>
+    <div class="choices">`+
+    q.opts.map((o,k)=>`<button data-i="${k}"><span class="num">${k+1}</span><span lang="ja">${o.text}</span></button>`).join('')+
+    `</div><button class="unknown" data-i="-1">모르겠어요</button></div>`;
+  app.querySelectorAll('button[data-i]').forEach(b=>{
+    b.onclick=()=>{S.ma.push(+b.dataset.i);
+      S.ma.length<S.mq.length?renderMock():showFinal()};
+  });
+  window.scrollTo(0,0);
+}
+/* 밴드마다 3문항 중 2개 이상 맞히면 통과. 아래에서부터 올라가다 막히면 거기서 멈춘다. */
+function mockResult(){
+  const per=MOCK.bands.map(b=>{
+    let hit=0,tot=0;
+    S.mq.forEach((q,i)=>{if(q.band===b.id){tot++;if(S.ma[i]===q.answerIdx)hit++}});
+    return{band:b,hit,tot,passed:hit>=2};
+  });
+  let lvl=1; // 아무 밴드도 통과 못하면 NM
+  for(const r of per){ if(!r.passed)break; lvl=r.band.pass; }
+  return{per,lvl};
+}
+
+/* ── 최종 결과 ─────────────────────────────────────── */
+function gapText(self,meas){
+  const d=meas-self;
+  if(d>=2)return`<b>아는 것에 비해 스스로를 낮게 보고 있습니다.</b> 문형과 어휘는 이미 위 등급의 것을 쥐고 있는데, 말할 때 꺼내 쓰지 못하고 있을 가능성이 큽니다. 새로 외우기보다 <b>아는 것을 소리 내어 쓰는 연습</b>이 등급을 올립니다.`;
+  if(d===1)return`실측이 설문보다 한 단계 높습니다. 지식은 갖춰져 있으니 발화량을 늘리는 쪽에 시간을 쓰세요.`;
+  if(d<=-2)return`<b>실제 지식보다 스스로를 높게 보고 있습니다.</b> 말은 나오지만 문형과 어휘가 아직 그 등급을 받치지 못하는 상태입니다. 유창해 보여도 정확도에서 깎이므로, <b>틀린 문항의 문형부터</b> 메우세요.`;
+  if(d===-1)return`설문이 실측보다 한 단계 높습니다. 큰 격차는 아니지만, 문형을 다지면 실제 등급이 더 안정적으로 나옵니다.`;
+  return`설문과 실측이 일치합니다. 자기 수준을 정확히 파악하고 있다는 뜻이고, 지금 등급이 실제와 가까울 가능성이 높습니다.`;
+}
+function reviewHtml(){
+  const items=S.mq.map((q,i)=>{
+    const picked=S.ma[i],skipped=picked===-1,ok=picked===q.answerIdx;
+    const cls=ok?'ok':(skipped?'skip':'no'),mark=ok?'✓':(skipped?'?':'✕');
+    const opts=q.opts.map((o,k)=>{
+      let cl='',lb='';
+      if(k===q.answerIdx){cl='right';lb=(k===picked)?'정답 · 내 선택':'정답'}
+      else if(k===picked){cl='mine';lb='내 선택'}
+      return `<li class="${cl}"><span class="n">${k+1}</span><span class="tx" lang="ja">${o.text}</span>`+
+             (lb?`<span class="lb">${lb}</span>`:'')+`</li>`;
+    }).join('');
+    return `<details class="rv ${cls}">
+      <summary><span class="mark" aria-hidden="true">${mark}</span>
+        <span class="q">${q.prompt}</span><span class="chev" aria-hidden="true">›</span></summary>
+      <div class="rv-body">
+        <p class="rv-stem" lang="ja">${q.prompt}</p>
+        <ol class="rv-opts">${opts}</ol>
+        ${skipped?'<p class="rv-skip">모르겠어요로 넘긴 문제입니다.</p>':''}
+        <p class="rv-exp"><b>해설</b>${q.explanation}</p>
+        <span class="rv-tag">${q.bandLabel} · ${q.type}</span>
+      </div></details>`;
+  }).join('');
+  const hit=S.mq.filter((q,i)=>S.ma[i]===q.answerIdx).length;
+  return `<div class="review"><div class="review-head">
+    <h3>문제별 해설 · ${S.mq.length}문항 중 ${hit}개 정답</h3>
+    <button type="button" id="rvall">모두 펼치기</button></div>${items}</div>`;
+}
+function bindReviewToggle(){
+  const btn=document.getElementById('rvall');
+  if(!btn)return;
+  btn.onclick=()=>{
+    const ds=[...app.querySelectorAll('details.rv')],open=ds.some(d=>!d.open);
+    ds.forEach(d=>{d.open=open});
+    btn.textContent=open?'모두 접기':'모두 펼치기';
+  };
+}
+function showFinal(){
+  const self=grade(),{per,lvl}=mockResult();
+  /* 실제 등급은 아는 것과 꺼내 쓰는 것 중 낮은 쪽에 가깝다 */
+  const final=Math.min(self,lvl);
+  setDock(null);
+  app.innerHTML=`<div class="rise">
+    <span class="badge">1차 12문항 · 2차 15문항 완료</span>
+    <p class="verdict">${LEVELS[final].code}<small>${LEVELS[final].full} · ${LEVELS[final].line}</small></p>
+    ${scaleHtml(final)}
+    <div class="twin">
+      <div><p class="lb">1차 · 설문</p><p class="lv">${LEVELS[self].code}</p><p class="sub">스스로 매긴 수준</p></div>
+      <div><p class="lb">2차 · 실측</p><p class="lv">${LEVELS[lvl].code}</p><p class="sub">문항으로 확인한 지식</p></div>
+    </div>
+    <div class="gap">${gapText(self,lvl)}</div>
+    <h2 style="font-size:1.0625rem;margin:2rem 0 .75rem">어디까지 통과했나</h2>
+    <div class="grid">`+
+      per.map(r=>`<div class="r${r.passed?'':' fail'}"><span class="n">${r.band.label}</span>
+        <span class="c">${r.band.desc} · <b>${r.hit}/${r.tot}</b></span></div>`).join('')+
+    `</div>
+    <p class="note" style="margin-top:-1rem">아래 밴드부터 올라가며 3문항 중 2개 이상 맞히면 통과입니다. 처음 막힌 곳이 지금의 한계선입니다.</p>
+    <div class="callout"><b>한 단계 올리려면</b><br>${nextStep(final)}</div>
+    ${reviewHtml()}
     <div class="caveat">
-      <b>이 결과는 자가진단입니다.</b> 실제 OPIc은 응시자의 답변을 ACTFL 공인 평가자가 듣고 전반적으로 평가합니다.
-      이 페이지는 녹음을 채점하지 않고, 여러분이 고른 답을 ACTFL 등급 기준에 비추어 계산한 것입니다.
-      스스로를 높게 보면 결과도 높게 나오니, 실제 등급과는 차이가 있을 수 있습니다.
-      공부 방향을 정하는 참고용으로 쓰세요.
+      <b>실제 OPIc은 이렇게 채점하지 않습니다.</b> 실제 시험은 응시자가 녹음한 답변을 ACTFL 공인 평가자가 듣고 전반적으로 평가합니다.
+      이 페이지는 말하기에 필요한 <b>언어 지식</b>을 객관식으로 확인한 것이라, 발음과 유창성은 재지 못합니다.
+      그래서 실제 등급은 여기서 나온 것보다 낮게 나올 수 있습니다. 공부 방향을 정하는 참고용으로 쓰세요.
     </div>
     <div class="adslot">광고 자리</div>
     <div class="next">
       <a href="./index.html#exam">OPIc 시험 정보 보기</a>
-      <a href="./level-test.html">JLPT 레벨 진단 테스트</a>
+      <a href="./sjpt-test.html">SJPT 예상 레벨 진단</a>
       <a href="./index.html#learn">말하기 시험 대비 자료</a>
     </div>
     <p style="margin-top:1rem"><button class="btn btn-quiet" id="again">다시 진단하기</button></p>
     <p style="text-align:center"><a class="back" href="./index.html">홈으로</a></p></div>`;
-  document.getElementById('again').onclick=()=>{S={idx:0,answers:[]};intro()};
+  bindReviewToggle();
+  document.getElementById('again').onclick=()=>{S={stage:1,idx:0,answers:[],mq:[],ma:[]};intro()};
   window.scrollTo(0,0);
 }
 
@@ -265,15 +410,24 @@ function intro(){
   app.innerHTML=`<a class="back" href="./index.html">← 홈으로</a><div class="rise" style="padding-top:1.25rem">
     <p class="eyebrow">OPIc 일본어</p>
     <h1>지금 시험을 보면<br>어느 등급이 나올까</h1>
-    <p class="lede">OPIc은 말하기 시험이라 정답을 맞히는 방식으로는 잴 수 없습니다. 대신 실제 시험의 Self Assessment와 같은 방식으로, 무엇을 어디까지 할 수 있는지 12문항으로 확인합니다.</p>
-    <div class="callout"><b>솔직하게 고르는 것이 핵심입니다</b><br>
+    <p class="lede">두 단계로 봅니다. <b>1차 설문 12문항</b>으로 스스로 생각하는 수준을 확인하고, <b>2차 실력 문항 15문항</b>으로 실제로 아는지 확인합니다. 둘의 차이가 지금 무엇을 해야 할지 알려줍니다.</p>
+    <div class="callout"><b>1차는 솔직하게 고르세요</b><br>
       "할 수 있을 것 같다"가 아니라 <b>지금 당장 준비 없이 되는가</b>로 고르세요.
       실제 OPIc도 잘한 순간이 아니라 일관되게 유지되는 수준으로 등급을 매깁니다.
-      스스로를 높게 잡으면 이 진단도 실제보다 높은 등급을 내놓습니다.
+      <br><br>2차는 객관식이라 자동으로 채점됩니다. 모르는 문제는 찍지 말고 <b>모르겠어요</b>를 누르세요.
     </div></div>`;
-  setDock('진단 시작',()=>{S={idx:0,answers:[]};renderQuestion()});
+  setDock('1차 설문 시작',()=>{S={stage:1,idx:0,answers:[],mq:[],ma:[]};renderQuestion()});
 }
-intro();
+
+fetch('./opic-mock-data.json')
+  .then(r=>{if(!r.ok)throw new Error(r.status);return r.json()})
+  .then(d=>{MOCK=d;intro()})
+  .catch(()=>{
+    setDock(null);
+    app.innerHTML=`<div style="padding-top:3rem"><h2>문제 파일을 불러오지 못했습니다</h2>
+    <p class="err">opic-mock-data.json 파일이 opic-test.html과 같은 폴더에 있는지 확인하세요.</p>
+    <p class="lede">파일을 더블클릭해서 여는 방식(file://)으로는 동작하지 않습니다. 로컬 서버로 열어야 합니다.</p></div>`;
+  });
 </script>
 </body>
 </html>
